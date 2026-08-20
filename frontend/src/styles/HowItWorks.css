@@ -1,0 +1,54 @@
+.how-it-works {
+  background: #0f172a;
+  color: white;
+  padding: 100px 80px;
+}
+
+.how-it-works h2 {
+  text-align: center;
+  font-size: 42px;
+  margin-bottom: 15px;
+}
+
+.how-subtitle {
+  text-align: center;
+  max-width: 750px;
+  margin: auto;
+  color: #cbd5e1;
+  line-height: 1.8;
+  margin-bottom: 60px;
+}
+
+.steps-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+}
+
+.step-card {
+  background: #1e293b;
+  border-radius: 18px;
+  padding: 35px;
+  text-align: center;
+  transition: 0.3s ease;
+}
+
+.step-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 35px rgba(139, 92, 246, 0.25);
+}
+
+.step-icon {
+  font-size: 42px;
+  color: #8b5cf6;
+  margin-bottom: 20px;
+}
+
+.step-card h3 {
+  margin-bottom: 15px;
+}
+
+.step-card p {
+  color: #cbd5e1;
+  line-height: 1.7;
+}
