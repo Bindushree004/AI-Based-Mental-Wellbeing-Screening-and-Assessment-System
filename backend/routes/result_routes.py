@@ -3,9 +3,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 
 from config.database import db
-from models.assessment_model import Assessment
-from models.assessment_response_model import AssessmentResponse
-from models.result_model import Result
+from model.assessment_model import Assessment
+from model.assessment_response_model import AssessmentResponse
+from model.result_model import Result
 
 
 result_bp = Blueprint(

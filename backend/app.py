@@ -5,7 +5,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
 from config.database import init_db
-from models import User, Assessment, AssessmentResponse, Result
+from model import User, AssessmentResponse, Result
 
 from routes.auth_routes import auth_bp
 from routes.assessment_routes import assessment_bp

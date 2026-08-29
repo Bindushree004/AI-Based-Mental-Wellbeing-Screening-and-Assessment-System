@@ -19,12 +19,27 @@ class Result(db.Model):
     )
 
     score = db.Column(
-        db.Integer,
+        db.Float,
         nullable=True
     )
 
     risk_level = db.Column(
         db.String(50),
+        nullable=True
+    )
+
+    prediction = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+    analysis = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    recommendations = db.Column(
+        db.Text,
         nullable=True
     )
 

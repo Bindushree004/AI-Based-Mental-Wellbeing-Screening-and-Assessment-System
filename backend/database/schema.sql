@@ -1,6 +1,14 @@
 CREATE DATABASE IF NOT EXISTS mental_wellbeing_db;
 USE mental_wellbeing_db;
 
+ALTER TABLE assessments
+ADD COLUMN age INT NULL,
+ADD COLUMN gender VARCHAR(20) NULL,
+ADD COLUMN occupation VARCHAR(100) NULL,
+ADD COLUMN sleep_hours FLOAT NULL,
+ADD COLUMN exercise_days_per_week INT NULL,
+ADD COLUMN screen_time_hours FLOAT NULL;
+
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -11,11 +19,29 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS assessments (
+
     id INT AUTO_INCREMENT PRIMARY KEY,
+
     user_id INT NOT NULL,
+
+    age INT NULL,
+
+    gender VARCHAR(20) NULL,
+
+    occupation VARCHAR(100) NULL,
+
+    sleep_hours FLOAT NULL,
+
+    exercise_days_per_week INT NULL,
+
+    screen_time_hours FLOAT NULL,
+
     status VARCHAR(50) NOT NULL DEFAULT 'started',
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
     completed_at TIMESTAMP NULL,
+
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 

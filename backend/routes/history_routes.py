@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from models.assessment_model import Assessment
-from models.result_model import Result
+from model.assessment_model import Assessment
+from model.result_model import Result
 
 
 history_bp = Blueprint(
