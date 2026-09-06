@@ -1,0 +1,682 @@
+* {
+  box-sizing: border-box;
+}
+
+
+/* =====================================================
+   PAGE
+===================================================== */
+
+.recommendations-page {
+
+  min-height: 100vh;
+
+  background: #0b1428;
+
+  color: #ffffff;
+
+  padding: 35px 40px 40px;
+
+  font-family: Arial, sans-serif;
+
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.recommendations-header {
+
+  max-width: 1050px;
+
+  margin: 0 auto 30px;
+
+}
+
+
+.recommendations-title {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 16px;
+
+}
+
+
+.recommendations-icon {
+
+  width: 46px;
+
+  height: 46px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 11px;
+
+  background: rgba(112, 85, 232, 0.18);
+
+  color: #9b87ff;
+
+  font-size: 21px;
+
+}
+
+
+.recommendations-title h1 {
+
+  margin: 0;
+
+  font-size: 32px;
+
+  font-weight: 700;
+
+}
+
+
+.recommendations-title p {
+
+  margin: 7px 0 0;
+
+  color: #7f93b3;
+
+  font-size: 15px;
+
+}
+
+
+/* =====================================================
+   INTRODUCTION
+===================================================== */
+
+.recommendations-intro {
+
+  max-width: 1050px;
+
+  margin: 0 auto 27px;
+
+  padding: 21px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 15px;
+
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 12px;
+
+}
+
+
+.intro-icon {
+
+  width: 43px;
+
+  height: 43px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: rgba(112, 85, 232, 0.18);
+
+  color: #9b87ff;
+
+  font-size: 19px;
+
+}
+
+
+.recommendations-intro h2 {
+
+  margin: 0;
+
+  font-size: 17px;
+
+  font-weight: 600;
+
+}
+
+
+.recommendations-intro p {
+
+  margin: 6px 0 0;
+
+  color: #7890b3;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+
+}
+
+
+/* =====================================================
+   SECTION
+===================================================== */
+
+.suggestions-section {
+
+  max-width: 1050px;
+
+  margin: 0 auto;
+
+}
+
+
+.suggestions-header {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 14px;
+
+}
+
+
+.suggestions-header h2 {
+
+  margin: 0;
+
+  font-size: 21px;
+
+}
+
+
+.suggestions-header span {
+
+  color: #7185a5;
+
+  font-size: 13px;
+
+}
+
+
+/* =====================================================
+   GRID
+===================================================== */
+
+.recommendations-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 16px;
+
+}
+
+
+/* =====================================================
+   CARD
+===================================================== */
+
+.recommendation-card {
+
+  min-height: 212px;
+
+  padding: 20px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 11px;
+
+  transition: 0.2s ease;
+
+}
+
+
+.recommendation-card:hover {
+
+  border-color: #405579;
+
+  transform: translateY(-2px);
+
+}
+
+
+/* =====================================================
+   CARD TOP
+===================================================== */
+
+.recommendation-top {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 17px;
+
+}
+
+
+.recommendation-card-icon {
+
+  width: 40px;
+
+  height: 40px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: rgba(112, 85, 232, 0.17);
+
+  color: #a28cff;
+
+  font-size: 17px;
+
+}
+
+
+.recommendation-category {
+
+  padding: 5px 10px;
+
+  border-radius: 15px;
+
+  background: rgba(70, 80, 190, 0.13);
+
+  color: #a08cff;
+
+  font-size: 10px;
+
+  font-weight: 600;
+
+}
+
+
+/* =====================================================
+   CARD CONTENT
+===================================================== */
+
+.recommendation-card h3 {
+
+  margin: 0 0 9px;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  line-height: 1.35;
+
+}
+
+
+.recommendation-card p {
+
+  margin: 0;
+
+  color: #7891b5;
+
+  font-size: 13px;
+
+  line-height: 1.55;
+
+}
+
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+.recommendation-footer {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-top: auto;
+
+  padding-top: 14px;
+
+  border-top: 1px solid #263b5b;
+
+}
+
+
+.recommendation-footer span {
+
+  color: #a18cff;
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+}
+
+
+.recommendation-footer svg {
+
+  color: #7185a5;
+
+  font-size: 11px;
+
+}
+
+
+/* =====================================================
+   LOADING
+===================================================== */
+
+.recommendations-loading {
+
+  width: 100%;
+
+  max-width: 535px;
+
+  margin: 120px auto;
+
+  padding: 45px 30px;
+
+  text-align: center;
+
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 12px;
+
+}
+
+
+.recommendations-loading svg {
+
+  color: #9b87ff;
+
+  font-size: 35px;
+
+  margin-bottom: 15px;
+
+}
+
+
+.recommendations-loading h2 {
+
+  margin: 0 0 8px;
+
+  font-size: 18px;
+
+}
+
+
+.recommendations-loading p {
+
+  margin: 0;
+
+  color: #7185a5;
+
+  font-size: 13px;
+
+}
+
+
+/* =====================================================
+   ERROR
+===================================================== */
+
+.recommendations-error {
+
+  width: 100%;
+
+  max-width: 535px;
+
+  margin: 120px auto;
+
+  padding: 45px 30px;
+
+  text-align: center;
+
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 12px;
+
+}
+
+
+.recommendations-error svg {
+
+  color: #9b87ff;
+
+  font-size: 35px;
+
+  margin-bottom: 15px;
+
+}
+
+
+.recommendations-error h2 {
+
+  margin: 0 0 8px;
+
+  font-size: 18px;
+
+}
+
+
+.recommendations-error p {
+
+  margin: 0;
+
+  color: #7185a5;
+
+  font-size: 13px;
+
+}
+
+
+/* =====================================================
+   NO RECOMMENDATIONS
+===================================================== */
+
+.no-recommendations {
+
+  max-width: 1050px;
+
+  margin: 30px auto;
+
+  padding: 55px 25px;
+
+  text-align: center;
+
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 12px;
+
+}
+
+
+.no-recommendations svg {
+
+  color: #9b87ff;
+
+  font-size: 35px;
+
+  margin-bottom: 15px;
+
+}
+
+
+.no-recommendations h2 {
+
+  margin: 0 0 8px;
+
+  font-size: 19px;
+
+}
+
+
+.no-recommendations p {
+
+  margin: 0;
+
+  color: #7185a5;
+
+  font-size: 13px;
+
+}
+
+
+/* =====================================================
+   DISCLAIMER
+===================================================== */
+
+.recommendations-disclaimer {
+
+  max-width: 1050px;
+
+  margin: 25px auto 0;
+
+  padding: 14px 18px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 10px;
+
+}
+
+
+.recommendations-disclaimer svg {
+
+  flex-shrink: 0;
+
+  color: #9b87ff;
+
+  font-size: 13px;
+
+}
+
+
+.recommendations-disclaimer p {
+
+  margin: 0;
+
+  color: #7185a5;
+
+  font-size: 11px;
+
+  line-height: 1.5;
+
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 900px) {
+
+  .recommendations-page {
+
+    padding: 25px 20px 30px;
+
+  }
+
+
+  .recommendations-grid {
+
+    grid-template-columns: repeat(2, 1fr);
+
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .recommendations-page {
+
+    padding: 20px 15px 25px;
+
+  }
+
+
+  .recommendations-title h1 {
+
+    font-size: 27px;
+
+  }
+
+
+  .recommendations-title p {
+
+    font-size: 13px;
+
+  }
+
+
+  .recommendations-intro {
+
+    align-items: flex-start;
+
+  }
+
+
+  .recommendations-grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+
+  .suggestions-header {
+
+    align-items: flex-start;
+
+    gap: 10px;
+
+  }
+
+
+  .recommendations-disclaimer {
+
+    align-items: flex-start;
+
+  }
+
+}

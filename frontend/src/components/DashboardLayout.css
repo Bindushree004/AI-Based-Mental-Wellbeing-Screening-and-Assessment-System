@@ -1,0 +1,54 @@
+/* ================================
+   MAIN DASHBOARD LAYOUT
+================================ */
+
+.dashboard-layout {
+  min-height: 100vh;
+
+  background: #0d1629;
+}
+
+
+/* ================================
+   PAGE CONTENT
+================================ */
+
+.dashboard-main {
+  margin-left: 250px;
+
+  min-height: 100vh;
+
+  padding: 30px;
+
+  box-sizing: border-box;
+
+  background: #0d1629;
+}
+
+
+/* ================================
+   TABLET
+================================ */
+
+@media (max-width: 768px) {
+
+  .dashboard-main {
+    margin-left: 220px;
+  }
+
+}
+
+
+/* ================================
+   MOBILE
+================================ */
+
+@media (max-width: 600px) {
+
+  .dashboard-main {
+    margin-left: 70px;
+
+    padding: 20px;
+  }
+
+}

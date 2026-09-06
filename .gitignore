@@ -1,8 +1,12 @@
-frontend/node_modules/
-frontend/dist/
-backend/__pycache__/
-*.pyc
-.env
+# Firebase credentials
+backend/firebase-service-account.json
+
+# Environment variables
+backend/.env
+
+# Python virtual environment
 backend/venv/
-backend/.venv/
-venv/
+
+# Python cache
+__pycache__/
+*.pyc

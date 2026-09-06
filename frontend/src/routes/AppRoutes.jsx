@@ -1,47 +1,61 @@
-import { Routes, Route } from "react-router-dom";
-
-import MainLayout from "../layouts/MainLayout";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Home from "../pages/Home";
 import About from "../pages/About";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
+
 import Dashboard from "../pages/Dashboard";
 import Assessment from "../pages/Assessment";
-import Result from "../pages/Result";
 import History from "../pages/History";
+import Recommendations from "../pages/Recommendations";
 import Profile from "../pages/Profile";
-import NotFound from "../pages/NotFound";
+
+import DashboardLayout from "../components/DashboardLayout";
 
 function AppRoutes() {
   return (
-    <Routes>
+    <BrowserRouter>
+      <Routes>
 
-      <Route element={<MainLayout />}>
-
+        {/* Public pages */}
         <Route path="/" element={<Home />} />
-
         <Route path="/about" element={<About />} />
-
         <Route path="/login" element={<Login />} />
-
         <Route path="/signup" element={<Signup />} />
 
-        <Route path="/dashboard" element={<Dashboard />} />
+        {/* Pages with Sidebar */}
+        <Route element={<DashboardLayout />}>
 
-        <Route path="/assessment" element={<Assessment />} />
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
 
-        <Route path="/result" element={<Result />} />
+          <Route
+            path="/assessment"
+            element={<Assessment />}
+          />
 
-        <Route path="/history" element={<History />} />
+          <Route
+            path="/history"
+            element={<History />}
+          />
 
-        <Route path="/profile" element={<Profile />} />
+          <Route
+            path="/recommendations"
+            element={<Recommendations />}
+          />
 
-      </Route>
+          <Route
+            path="/profile"
+            element={<Profile />}
+          />
 
-      <Route path="*" element={<NotFound />} />
+        </Route>
 
-    </Routes>
+      </Routes>
+    </BrowserRouter>
   );
 }
 

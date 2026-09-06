@@ -1,47 +1,34 @@
 import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+
 import Sidebar from "../components/layout/Sidebar";
 import { auth } from "../firebase";
+
 import "./Dashboard.css";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
 function Dashboard() {
-  const [user, setUser] = useState(null);
-
-  const [dashboard, setDashboard] = useState({
-    wellbeingScore: null,
-    riskLevel: null,
-    assessmentsCompleted: 0,
-    lastAssessment: null,
-  });
-
-  const [latestAssessment, setLatestAssessment] = useState(null);
-
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadDashboard = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setError("User is not logged in.");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
 
-        // Get currently logged-in Firebase user
-        const currentUser = auth.currentUser;
-
-        if (!currentUser) {
-          setError("User is not logged in.");
-          setLoading(false);
-          return;
-        }
-
-        // Get latest Firebase user information
-        await currentUser.reload();
-
         // Get Firebase ID token
-        const token = await currentUser.getIdToken();
+        const token = await user.getIdToken();
 
-        // Call Flask backend
+        // Fetch dashboard data from Flask backend
         const response = await fetch(
           `${API_BASE_URL}/dashboard`,
           {
@@ -55,37 +42,15 @@ function Dashboard() {
 
         const data = await response.json();
 
+        console.log("Dashboard response:", data);
+
         if (!response.ok) {
           throw new Error(
             data.message || "Failed to load dashboard"
           );
         }
 
-        console.log("Dashboard response:", data);
-
-        // Store user information
-        // Use Firebase displayName so profile changes
-        // are reflected on the dashboard.
-        setUser({
-          ...(data.user || {}),
-          name:
-            currentUser.displayName ||
-            data.user?.name ||
-            "User",
-        });
-
-        // Store dashboard statistics
-        setDashboard(
-          data.dashboard || {
-            wellbeingScore: null,
-            riskLevel: null,
-            assessmentsCompleted: 0,
-            lastAssessment: null,
-          }
-        );
-
-        // Store latest assessment
-        setLatestAssessment(data.latestAssessment || null);
+        setDashboardData(data);
 
       } catch (err) {
         console.error("Dashboard error:", err);
@@ -93,89 +58,70 @@ function Dashboard() {
       } finally {
         setLoading(false);
       }
-    };
+    });
 
-    loadDashboard();
+    return () => unsubscribe();
   }, []);
 
-  // -----------------------------------
   // Loading
-  // -----------------------------------
-
   if (loading) {
     return (
       <div className="dashboard-page">
         <Sidebar />
 
         <main className="dashboard-content">
-          <div className="dashboard-header">
-            <h1>Loading...</h1>
-            <p>Loading your mental wellbeing dashboard.</p>
+          <div className="dashboard-loading">
+            Loading dashboard...
           </div>
         </main>
       </div>
     );
   }
 
-  // -----------------------------------
   // Error
-  // -----------------------------------
-
   if (error) {
     return (
       <div className="dashboard-page">
         <Sidebar />
 
         <main className="dashboard-content">
-          <div className="dashboard-header">
-            <h1>Unable to load dashboard</h1>
-
-            <p>
-              {error}
-            </p>
+          <div className="dashboard-error">
+            {error}
           </div>
         </main>
       </div>
     );
   }
 
-  // -----------------------------------
-  // Values
-  // -----------------------------------
+  const dashboard = dashboardData?.dashboard || {};
+  const latestAssessment =
+    dashboardData?.latestAssessment || null;
 
-  const wellbeingScore =
-    dashboard.wellbeingScore !== null &&
-    dashboard.wellbeingScore !== undefined
-      ? dashboard.wellbeingScore
-      : "--";
+  const user = dashboardData?.user || {};
 
-  const riskLevel =
-    dashboard.riskLevel ||
-    "--";
-
-  const assessmentsCompleted =
-    dashboard.assessmentsCompleted ?? 0;
-
-  const hasAssessment = latestAssessment !== null;
-
-  // -----------------------------------
-  // Date
-  // -----------------------------------
-
+  // Format date
   const formatDate = (dateValue) => {
     if (!dateValue) {
-      return "No assessment yet";
+      return "--";
     }
 
     try {
       let date;
 
-      // Firestore Timestamp returned as object
+      // Firestore timestamp returned as object
       if (
         typeof dateValue === "object" &&
         dateValue._seconds
       ) {
         date = new Date(dateValue._seconds * 1000);
+      }
+
+      // Firestore timestamp returned with seconds
+      else if (
+        typeof dateValue === "object" &&
+        dateValue.seconds
+      ) {
+        date = new Date(dateValue.seconds * 1000);
       }
 
       // Normal date/string
@@ -184,21 +130,19 @@ function Dashboard() {
       }
 
       if (isNaN(date.getTime())) {
-        return "No assessment yet";
+        return "--";
       }
 
-      return date.toLocaleDateString();
+      return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+
     } catch {
-      return "No assessment yet";
+      return "--";
     }
   };
-
-  const lastAssessmentDate =
-    formatDate(dashboard.lastAssessment);
-
-  // -----------------------------------
-  // Dashboard
-  // -----------------------------------
 
   return (
     <div className="dashboard-page">
@@ -206,14 +150,17 @@ function Dashboard() {
       {/* Sidebar */}
       <Sidebar />
 
-      {/* Main Content */}
+      {/* Dashboard Main Content */}
       <main className="dashboard-content">
 
         {/* Header */}
         <div className="dashboard-header">
 
           <h1>
-            Welcome, {user?.name || "User"}
+            Welcome to{" "}
+            {user.name
+              ? `${user.name}`
+              : "MindSync AI"}
           </h1>
 
           <p>
@@ -231,11 +178,15 @@ function Dashboard() {
             <h3>Wellbeing Score</h3>
 
             <p className="stat-value">
-              {wellbeingScore} / 100
+              {dashboard.wellbeingScore !== null &&
+              dashboard.wellbeingScore !== undefined
+                ? `${dashboard.wellbeingScore} / 100`
+                : "-- / 100"}
             </p>
 
             <span>
-              {hasAssessment
+              {dashboard.wellbeingScore !== null &&
+              dashboard.wellbeingScore !== undefined
                 ? "Latest assessment score"
                 : "Complete an assessment"}
             </span>
@@ -248,11 +199,11 @@ function Dashboard() {
             <h3>Risk Level</h3>
 
             <p className="stat-value">
-              {riskLevel}
+              {dashboard.riskLevel || "--"}
             </p>
 
             <span>
-              {hasAssessment
+              {dashboard.riskLevel
                 ? "Based on latest assessment"
                 : "Assessment required"}
             </span>
@@ -265,7 +216,7 @@ function Dashboard() {
             <h3>Assessments Completed</h3>
 
             <p className="stat-value">
-              {assessmentsCompleted}
+              {dashboard.assessmentsCompleted ?? 0}
             </p>
 
             <span>
@@ -279,20 +230,12 @@ function Dashboard() {
 
             <h3>Last Assessment</h3>
 
-            <p
-              className="stat-value"
-              style={{
-                fontSize:
-                  lastAssessmentDate === "No assessment yet"
-                    ? "20px"
-                    : "28px",
-              }}
-            >
-              {lastAssessmentDate}
+            <p className="stat-value">
+              {formatDate(dashboard.lastAssessment)}
             </p>
 
             <span>
-              {hasAssessment
+              {dashboard.lastAssessment
                 ? "Most recent assessment"
                 : "No assessment yet"}
             </span>
@@ -321,59 +264,74 @@ function Dashboard() {
 
           </div>
 
-          <div className="latest-result">
+          {latestAssessment ? (
 
-            {/* Score Circle */}
-            <div className="result-score">
+            <div className="latest-result">
 
-              <span>
-                {wellbeingScore}
-              </span>
+              <div className="result-score">
 
-              <small>
-                / 100
-              </small>
+                <span>
+                  {latestAssessment.wellbeingScore ?? "--"}
+                </span>
 
-            </div>
+                <small>
+                  / 100
+                </small>
 
-            {/* Result Information */}
-            <div className="result-info">
+              </div>
 
-              {hasAssessment ? (
-                <>
-                  <h3>
-                    Assessment Completed
-                  </h3>
+              <div className="result-info">
 
-                  <p>
-                    Risk Level:{" "}
-                    <strong>
-                      {riskLevel}
-                    </strong>
-                  </p>
+                <h3>
+                  {latestAssessment.riskLevel
+                    ? `Risk Level: ${latestAssessment.riskLevel}`
+                    : "Assessment Completed"}
+                </h3>
 
-                  <p>
-                    Completed on{" "}
-                    {lastAssessmentDate}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h3>
-                    No Assessment Available
-                  </h3>
+                <p>
+                  Assessment completed on{" "}
+                  {formatDate(
+                    latestAssessment.createdAt
+                  )}
+                </p>
 
-                  <p>
-                    Complete your first wellbeing
-                    assessment to receive your
-                    personalized result.
-                  </p>
-                </>
-              )}
+              </div>
 
             </div>
 
-          </div>
+          ) : (
+
+            <div className="latest-result">
+
+              <div className="result-score">
+
+                <span>
+                  --
+                </span>
+
+                <small>
+                  / 100
+                </small>
+
+              </div>
+
+              <div className="result-info">
+
+                <h3>
+                  No Assessment Available
+                </h3>
+
+                <p>
+                  Complete your first wellbeing
+                  assessment to receive your
+                  personalized result.
+                </p>
+
+              </div>
+
+            </div>
+
+          )}
 
         </section>
 
@@ -397,21 +355,28 @@ function Dashboard() {
 
           </div>
 
-          <div className="recommendation-empty">
+          {latestAssessment?.recommendation ? (
 
-            {hasAssessment ? (
+            <div className="recommendation-empty">
+
               <p>
-                Your personalized recommendations
-                will appear here.
+                {latestAssessment.recommendation}
               </p>
-            ) : (
+
+            </div>
+
+          ) : (
+
+            <div className="recommendation-empty">
+
               <p>
                 Complete an assessment to receive
                 personalized recommendations.
               </p>
-            )}
 
-          </div>
+            </div>
+
+          )}
 
         </section>
 

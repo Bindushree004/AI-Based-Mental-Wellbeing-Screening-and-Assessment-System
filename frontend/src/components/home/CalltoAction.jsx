@@ -1,21 +1,24 @@
-import { Link } from "react-router-dom";
-import "../../styles/CallToAction.css";
+import { useNavigate } from "react-router-dom";
 
 function CallToAction() {
-  return (
-    <section className="cta">
+  const navigate = useNavigate();
 
-      <h2>Ready to Start Your Mental Wellbeing Journey?</h2>
+  return (
+    <section className="call-to-action">
+
+      <h2>Take the First Step Towards Better Wellbeing</h2>
 
       <p>
-        Take your first step towards better mental health with
-        AI-powered screening, personalized insights, and
-        wellbeing recommendations.
+        Understand your mental wellbeing and receive personalized
+        recommendations through our assessment.
       </p>
 
-      <Link to="/signup" className="cta-btn">
-        Start Free Assessment
-      </Link>
+      <button
+        type="button"
+        onClick={() => navigate("/assessment")}
+      >
+        Start Assessment
+      </button>
 
     </section>
   );

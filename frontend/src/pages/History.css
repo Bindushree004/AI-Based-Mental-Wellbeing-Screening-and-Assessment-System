@@ -1,0 +1,659 @@
+* {
+  box-sizing: border-box;
+}
+
+.history-page {
+  min-height: 100vh;
+
+  background: #0b1428;
+
+  color: #ffffff;
+
+  padding: 35px 40px 40px;
+
+  font-family: Arial, sans-serif;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.history-header {
+  max-width: 1200px;
+
+  margin: 0 auto 30px;
+}
+
+.history-title {
+  display: flex;
+
+  align-items: center;
+
+  gap: 16px;
+}
+
+.history-icon {
+  width: 52px;
+  height: 52px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  background: rgba(112, 85, 232, 0.18);
+
+  color: #9b87ff;
+
+  font-size: 23px;
+}
+
+.history-title h1 {
+  margin: 0;
+
+  font-size: 34px;
+
+  font-weight: 700;
+}
+
+.history-title p {
+  margin: 7px 0 0;
+
+  color: #7f93b3;
+
+  font-size: 16px;
+}
+
+/* =========================
+   SUMMARY
+========================= */
+
+.history-summary {
+  max-width: 1200px;
+
+  margin: 0 auto 30px;
+
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 20px;
+}
+
+.summary-card {
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 12px;
+
+  padding: 22px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 17px;
+}
+
+.summary-number,
+.summary-risk {
+  font-size: 30px;
+
+  font-weight: 700;
+
+  color: #9b87ff;
+
+  min-width: 65px;
+}
+
+.summary-card span {
+  display: block;
+
+  color: #ffffff;
+
+  font-size: 15px;
+
+  font-weight: 600;
+}
+
+.summary-card p {
+  margin: 5px 0 0;
+
+  color: #7185a5;
+
+  font-size: 13px;
+}
+
+.summary-risk.low {
+  color: #63d39a;
+}
+
+.summary-risk.moderate {
+  color: #e8c86b;
+}
+
+.summary-risk.high {
+  color: #ed7373;
+}
+
+/* =========================
+   HISTORY SECTION
+========================= */
+
+.history-section {
+  max-width: 1200px;
+
+  margin: 0 auto;
+}
+
+.section-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  margin: 0;
+
+  font-size: 22px;
+}
+
+.section-header span {
+  color: #7185a5;
+
+  font-size: 14px;
+}
+
+/* =========================
+   HISTORY CARD
+========================= */
+
+.history-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+}
+
+.history-card {
+  min-height: 92px;
+
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 12px;
+
+  padding: 18px 20px;
+
+  display: grid;
+
+  grid-template-columns:
+    2fr
+    1fr
+    1fr
+    1fr
+    auto;
+
+  align-items: center;
+
+  gap: 20px;
+
+  transition: 0.2s ease;
+}
+
+.history-card:hover {
+  border-color: #405579;
+
+  transform: translateY(-1px);
+}
+
+/* Left */
+
+.history-card-left {
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+}
+
+.assessment-number {
+  width: 45px;
+  height: 45px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: rgba(112, 85, 232, 0.16);
+
+  color: #9b87ff;
+}
+
+.assessment-info h3 {
+  margin: 0;
+
+  font-size: 16px;
+
+  font-weight: 600;
+}
+
+.assessment-date {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  margin-top: 7px;
+
+  color: #7185a5;
+
+  font-size: 13px;
+}
+
+/* =========================
+   SCORE
+========================= */
+
+.history-score span,
+.history-risk > span {
+  display: block;
+
+  color: #7185a5;
+
+  font-size: 12px;
+
+  margin-bottom: 6px;
+}
+
+.history-score strong {
+  font-size: 21px;
+
+  color: #ffffff;
+}
+
+.history-score small {
+  font-size: 12px;
+
+  color: #7185a5;
+
+  font-weight: normal;
+}
+
+/* =========================
+   RISK
+========================= */
+
+.risk-badge {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px 13px;
+
+  border-radius: 20px;
+
+  font-size: 12px;
+
+  font-weight: 600;
+}
+
+.risk-badge.low {
+  background: rgba(54, 180, 112, 0.14);
+
+  color: #63d39a;
+}
+
+.risk-badge.moderate {
+  background: rgba(220, 179, 65, 0.14);
+
+  color: #e8c86b;
+}
+
+.risk-badge.high {
+  background: rgba(220, 75, 75, 0.14);
+
+  color: #ed7373;
+}
+
+/* =========================
+   STATUS
+========================= */
+
+.status-badge {
+  display: inline-block;
+
+  padding: 6px 12px;
+
+  border-radius: 20px;
+
+  background: rgba(70, 140, 230, 0.12);
+
+  color: #78aef2;
+
+  font-size: 12px;
+}
+
+/* =========================
+   VIEW BUTTON
+========================= */
+
+.view-result-button {
+  height: 40px;
+
+  padding: 0 15px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  border: 1px solid #354b6d;
+
+  border-radius: 7px;
+
+  background: #16243a;
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  font-size: 13px;
+
+  transition: 0.2s ease;
+}
+
+.view-result-button:hover {
+  background: #6954e8;
+
+  border-color: #6954e8;
+}
+
+/* =========================
+   EMPTY STATE
+========================= */
+
+.empty-history {
+  padding: 70px 20px;
+
+  text-align: center;
+
+  background: #101d32;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 12px;
+}
+
+.empty-history svg {
+  font-size: 38px;
+
+  color: #7055e8;
+
+  margin-bottom: 15px;
+}
+
+.empty-history h3 {
+  margin: 0 0 8px;
+
+  font-size: 19px;
+}
+
+.empty-history p {
+  margin: 0;
+
+  color: #7185a5;
+
+  font-size: 14px;
+}
+
+/* =========================
+   RESULT MODAL
+========================= */
+
+.result-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  background: rgba(3, 8, 18, 0.78);
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 25px;
+
+  z-index: 1000;
+}
+
+.result-modal {
+  position: relative;
+
+  width: 100%;
+
+  max-width: 650px;
+
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  background: #101d32;
+
+  border: 1px solid #314866;
+
+  border-radius: 15px;
+
+  padding: 30px;
+}
+
+.close-modal {
+  position: absolute;
+
+  top: 15px;
+
+  right: 18px;
+
+  width: 35px;
+  height: 35px;
+
+  border: none;
+
+  background: transparent;
+
+  color: #8da0bb;
+
+  font-size: 27px;
+
+  cursor: pointer;
+}
+
+.close-modal:hover {
+  color: #ffffff;
+}
+
+.result-modal h2 {
+  margin: 0;
+
+  font-size: 25px;
+}
+
+.modal-date {
+  margin: 7px 0 25px;
+
+  color: #7185a5;
+
+  font-size: 14px;
+}
+
+/* Score */
+
+.modal-score {
+  padding: 20px;
+
+  background: #0d1729;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 10px;
+
+  text-align: center;
+
+  margin-bottom: 15px;
+}
+
+.modal-score span {
+  display: block;
+
+  color: #7185a5;
+
+  font-size: 14px;
+
+  margin-bottom: 7px;
+}
+
+.modal-score strong {
+  color: #9b87ff;
+
+  font-size: 42px;
+}
+
+.modal-score small {
+  color: #7185a5;
+
+  font-size: 17px;
+
+  font-weight: normal;
+}
+
+/* Risk */
+
+.modal-risk {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  padding: 16px 20px;
+
+  background: #0d1729;
+
+  border: 1px solid #263b5b;
+
+  border-radius: 10px;
+
+  margin-bottom: 22px;
+}
+
+.modal-risk > span {
+  color: #ffffff;
+
+  font-size: 14px;
+
+  font-weight: 600;
+}
+
+.risk-badge.large {
+  padding: 8px 17px;
+
+  font-size: 13px;
+}
+
+/* Modal sections */
+
+.modal-section {
+  margin-top: 22px;
+}
+
+.modal-section h3 {
+  margin: 0 0 10px;
+
+  font-size: 17px;
+}
+
+.modal-section p {
+  margin: 0;
+
+  color: #8ca0bd;
+
+  line-height: 1.6;
+
+  font-size: 14px;
+}
+
+.modal-section ul {
+  margin: 0;
+
+  padding-left: 20px;
+
+  color: #8ca0bd;
+}
+
+.modal-section li {
+  margin-bottom: 9px;
+
+  font-size: 14px;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 900px) {
+
+  .history-page {
+    padding: 25px 20px;
+  }
+
+  .history-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .history-card {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .history-card-left {
+    grid-column: 1 / -1;
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  .history-title h1 {
+    font-size: 27px;
+  }
+
+  .history-card {
+    grid-template-columns: 1fr;
+  }
+
+  .history-card-left {
+    grid-column: auto;
+  }
+
+  .view-result-button {
+    width: 100%;
+
+    justify-content: center;
+  }
+
+}

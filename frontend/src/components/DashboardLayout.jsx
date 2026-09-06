@@ -5,11 +5,13 @@ import "./DashboardLayout.css";
 function DashboardLayout() {
   return (
     <div className="dashboard-layout">
+
       <Sidebar />
 
       <main className="dashboard-main">
         <Outlet />
       </main>
+
     </div>
   );
 }

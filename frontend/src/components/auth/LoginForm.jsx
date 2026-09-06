@@ -1,21 +1,36 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
-import { toast } from "react-toastify";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  sendPasswordResetEmail,
+} from "firebase/auth";
 
 import {
+  FaBrain,
   FaEnvelope,
   FaLock,
   FaEye,
   FaEyeSlash,
-  FaBrain,
 } from "react-icons/fa";
+
+import { loginUser } from "../../api/auth";
+import { auth } from "../../firebase";
 
 import "../../styles/Login.css";
 
 function LoginForm() {
+  const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [loginFailed, setLoginFailed] = useState(false);
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
   const {
     register,
@@ -26,114 +41,268 @@ function LoginForm() {
   const onSubmit = async (data) => {
     setLoading(true);
 
-    console.log(data);
+    try {
+      const response = await loginUser({
+        email: data.email.trim(),
+        password: data.password,
+      });
 
-    // Simulating API call
-    setTimeout(() => {
-      toast.success("Login Successful!");
+      console.log("Login response:", response);
 
+      setLoginSuccess(true);
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 3000);
+
+    } catch (error) {
+      console.error("Login error:", error);
+
+      setLoginFailed(true);
+
+      setTimeout(() => {
+        setLoginFailed(false);
+      }, 3000);
+
+    } finally {
       setLoading(false);
+    }
+  };
 
-      // Later we'll redirect to Dashboard here
-      // navigate("/dashboard");
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
 
-    }, 2000);
+    if (!resetEmail.trim()) {
+      setResetMessage("Please enter your email address.");
+      return;
+    }
+
+    setResetLoading(true);
+    setResetMessage("");
+
+    try {
+      await sendPasswordResetEmail(
+        auth,
+        resetEmail.trim()
+      );
+
+      setResetMessage(
+        "Password reset email sent successfully."
+      );
+
+    } catch (error) {
+      console.error("Password reset error:", error);
+
+      if (error.code === "auth/user-not-found") {
+        setResetMessage(
+          "No account found with this email."
+        );
+      } else if (error.code === "auth/invalid-email") {
+        setResetMessage(
+          "Please enter a valid email address."
+        );
+      } else {
+        setResetMessage(
+          "Unable to send reset email. Please try again."
+        );
+      }
+
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   return (
     <div className="login-container">
 
-      <div className="login-card">
+      {/* LOGIN CARD */}
+      {!loginSuccess && !loginFailed && (
+        <div className="login-card">
 
-        {/* Logo */}
-        <div className="login-logo">
-          <FaBrain className="login-logo-icon" />
-          <h2>MindSync AI</h2>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)}>
-
-          {/* Email */}
-          <div className="input-group">
-
-            <FaEnvelope className="input-icon" />
-
-            <input
-              type="email"
-              placeholder="Email Address"
-              {...register("email", {
-                required: "Email is required",
-                pattern: {
-                  value: /^\S+@\S+\.\S+$/,
-                  message: "Enter a valid email address",
-                },
-              })}
-            />
-
+          {/* Logo */}
+          <div className="login-logo">
+            <FaBrain className="login-logo-icon" />
+            <h2>MindSync AI</h2>
           </div>
 
-          {errors.email && (
-            <small>{errors.email.message}</small>
-          )}
+          {/* Heading */}
+          <h1>Welcome Back</h1>
 
-          {/* Password */}
-          <div className="input-group">
+          <p>
+            Login to continue your mental wellbeing journey.
+          </p>
 
-            <FaLock className="input-icon" />
+          {/* Login Form */}
+          <form onSubmit={handleSubmit(onSubmit)}>
 
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              {...register("password", {
-                required: "Password is required",
-                minLength: {
-                  value: 6,
-                  message: "Password must be at least 6 characters",
-                },
-              })}
-            />
+            {/* Email */}
+            <div className="input-group">
+              <FaEnvelope className="input-icon" />
 
-            <span
-              className="eye-icon"
-              onClick={() => setShowPassword(!showPassword)}
+              <input
+                type="email"
+                placeholder="Email Address"
+                {...register("email", {
+                  required: "Email is required",
+                  pattern: {
+                    value: /^\S+@\S+\.\S+$/,
+                    message: "Enter a valid email address",
+                  },
+                })}
+              />
+            </div>
+
+            {errors.email && (
+              <small>{errors.email.message}</small>
+            )}
+
+            {/* Password */}
+            <div className="input-group">
+              <FaLock className="input-icon" />
+
+              <input
+                type={
+                  showPassword
+                    ? "text"
+                    : "password"
+                }
+                placeholder="Password"
+                {...register("password", {
+                  required: "Password is required",
+                })}
+              />
+
+              <span
+                className="eye-icon"
+                onClick={() =>
+                  setShowPassword(!showPassword)
+                }
+              >
+                {showPassword ? (
+                  <FaEyeSlash />
+                ) : (
+                  <FaEye />
+                )}
+              </span>
+            </div>
+
+            {errors.password && (
+              <small>{errors.password.message}</small>
+            )}
+
+            {/* Forgot Password */}
+            <div className="forgot-password">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgotPassword(true);
+                  setResetMessage("");
+                }}
+              >
+                Forgot Password?
+              </button>
+            </div>
+
+            {/* Login */}
+            <button
+              type="submit"
+              disabled={loading}
             >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </span>
+              {loading
+                ? "Logging in..."
+                : "Login"}
+            </button>
 
-          </div>
+          </form>
 
-          {errors.password && (
-            <small>{errors.password.message}</small>
-          )}
+          {/* Signup */}
+          <p className="signup-text">
+            Don't have an account?
 
-          {/* Remember Me & Forgot Password */}
-          <div className="login-options">
-
-            <label>
-              <input type="checkbox" />
-              Remember Me
-            </label>
-
-            <Link to="/forgot-password">
-              Forgot Password?
+            <Link to="/signup">
+              {" "}Sign Up
             </Link>
+          </p>
+
+        </div>
+      )}
+
+      {/* SUCCESS POPUP */}
+      {loginSuccess && (
+        <div className="login-success-popup">
+          Login successful
+        </div>
+      )}
+
+      {/* FAILED POPUP */}
+      {loginFailed && (
+        <div className="login-failed-popup">
+          Login failed, try signing up
+        </div>
+      )}
+
+      {/* FORGOT PASSWORD POPUP */}
+      {showForgotPassword && (
+        <div className="forgot-password-overlay">
+
+          <div className="forgot-password-popup">
+
+            <h2>Reset Password</h2>
+
+            <p>
+              Enter your email address and we'll
+              send you a password reset link.
+            </p>
+
+            <form onSubmit={handleForgotPassword}>
+
+              <div className="reset-input-group">
+                <FaEnvelope />
+
+                <input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={resetEmail}
+                  onChange={(e) =>
+                    setResetEmail(e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+              >
+                {resetLoading
+                  ? "Sending..."
+                  : "Send Reset Email"}
+              </button>
+
+            </form>
+
+            {resetMessage && (
+              <p className="reset-message">
+                {resetMessage}
+              </p>
+            )}
+
+            <button
+              className="close-reset"
+              type="button"
+              onClick={() => {
+                setShowForgotPassword(false);
+                setResetEmail("");
+                setResetMessage("");
+              }}
+            >
+              Cancel
+            </button>
 
           </div>
 
-          {/* Login Button */}
-          <button type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
-
-        </form>
-
-        {/* Signup Link */}
-        <p className="signup-text">
-          Don't have an account?
-          <Link to="/signup"> Sign Up</Link>
-        </p>
-
-      </div>
+        </div>
+      )}
 
     </div>
   );

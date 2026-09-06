@@ -1,425 +1,671 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from flask import Blueprint, jsonify, request
+from firebase_admin import auth, firestore
 
-from config.database import db
-from model.assessment_model import Assessment
-from model.assessment_response_model import AssessmentResponse
-from model.result_model import Result
-
-from model.integration.wellbeing_service import assess_wellbeing
+from config.firebase import db
 
 
-assessment_bp = Blueprint(
-    "assessment",
-    __name__,
-    url_prefix="/api/assessments"
-)
+assessment_bp = Blueprint("assessment", __name__)
 
 
-# --------------------------------------------------
-# CREATE / START ASSESSMENT
-# --------------------------------------------------
-@assessment_bp.route("/", methods=["POST"])
-@jwt_required()
-def create_assessment():
+# =========================================================
+# FIREBASE TOKEN VERIFICATION
+# =========================================================
 
-    user_id = int(get_jwt_identity())
+def verify_token():
 
-    data = request.get_json() or {}
+    auth_header = request.headers.get("Authorization")
 
-    age = data.get("age")
-    gender = data.get("gender")
-    occupation = data.get("occupation")
-    sleep_hours = data.get("sleep_hours")
-    exercise_days_per_week = data.get("exercise_days_per_week")
-    screen_time_hours = data.get("screen_time_hours")
+    if not auth_header:
+        return None, jsonify({
+            "status": "error",
+            "message": "Authorization token is missing"
+        }), 401
 
-    assessment = Assessment(
-        user_id=user_id,
-        age=age,
-        gender=gender,
-        occupation=occupation,
-        sleep_hours=sleep_hours,
-        exercise_days_per_week=exercise_days_per_week,
-        screen_time_hours=screen_time_hours,
-        status="started"
-    )
+    if not auth_header.startswith("Bearer "):
+        return None, jsonify({
+            "status": "error",
+            "message": "Invalid authorization format"
+        }), 401
 
-    db.session.add(assessment)
-    db.session.commit()
+    token = auth_header.split("Bearer ", 1)[1].strip()
 
-    return jsonify({
-        "message": "Assessment started successfully",
-        "assessment": {
-            "id": assessment.id,
-            "user_id": assessment.user_id,
-            "age": assessment.age,
-            "gender": assessment.gender,
-            "occupation": assessment.occupation,
-            "sleep_hours": assessment.sleep_hours,
-            "exercise_days_per_week": assessment.exercise_days_per_week,
-            "screen_time_hours": assessment.screen_time_hours,
-            "status": assessment.status,
-            "created_at": (
-                assessment.created_at.isoformat()
-                if assessment.created_at else None
-            )
-        }
-    }), 201
-
-
-# --------------------------------------------------
-# GET ASSESSMENT
-# --------------------------------------------------
-@assessment_bp.route("/<int:assessment_id>", methods=["GET"])
-@jwt_required()
-def get_assessment(assessment_id):
-
-    user_id = int(get_jwt_identity())
-
-    assessment = Assessment.query.filter_by(
-        id=assessment_id,
-        user_id=user_id
-    ).first()
-
-    if not assessment:
-        return jsonify({
-            "message": "Assessment not found"
-        }), 404
-
-    return jsonify({
-        "id": assessment.id,
-        "user_id": assessment.user_id,
-        "age": assessment.age,
-        "gender": assessment.gender,
-        "occupation": assessment.occupation,
-        "sleep_hours": assessment.sleep_hours,
-        "exercise_days_per_week": assessment.exercise_days_per_week,
-        "screen_time_hours": assessment.screen_time_hours,
-        "status": assessment.status,
-        "created_at": (
-            assessment.created_at.isoformat()
-            if assessment.created_at else None
-        ),
-        "completed_at": (
-            assessment.completed_at.isoformat()
-            if assessment.completed_at else None
-        )
-    }), 200
-
-
-# --------------------------------------------------
-# SUBMIT ASSESSMENT RESPONSE
-# --------------------------------------------------
-@assessment_bp.route(
-    "/<int:assessment_id>/responses",
-    methods=["POST"]
-)
-@jwt_required()
-def submit_response(assessment_id):
-
-    user_id = int(get_jwt_identity())
-
-    assessment = Assessment.query.filter_by(
-        id=assessment_id,
-        user_id=user_id
-    ).first()
-
-    if not assessment:
-        return jsonify({
-            "message": "Assessment not found"
-        }), 404
-
-    if assessment.status == "completed":
-        return jsonify({
-            "message": "Assessment is already completed"
-        }), 400
-
-    data = request.get_json()
-
-    if not data:
-        return jsonify({
-            "message": "Request body is required"
-        }), 400
-
-    question_id = data.get("question_id")
-    response = data.get("response")
-
-    if question_id is None or response is None:
-        return jsonify({
-            "message": "question_id and response are required"
-        }), 400
+    if not token:
+        return None, jsonify({
+            "status": "error",
+            "message": "Authorization token is empty"
+        }), 401
 
     try:
-        question_id = int(question_id)
-        response = int(response)
-    except (TypeError, ValueError):
+
+        decoded_token = auth.verify_id_token(token)
+
+        return decoded_token, None, None
+
+    except auth.ExpiredIdTokenError:
+
+        return None, jsonify({
+            "status": "error",
+            "message": "Firebase token has expired"
+        }), 401
+
+    except auth.InvalidIdTokenError:
+
+        return None, jsonify({
+            "status": "error",
+            "message": "Invalid Firebase token"
+        }), 401
+
+    except Exception as e:
+
+        print("Token verification error:", str(e))
+
+        return None, jsonify({
+            "status": "error",
+            "message": "Failed to verify authentication"
+        }), 401
+
+
+# =========================================================
+# GET ASSESSMENT QUESTIONS
+# =========================================================
+
+@assessment_bp.route("/api/assessment", methods=["GET", "OPTIONS"])
+def get_assessment():
+
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+
+        decoded_token, error_response, error_status = verify_token()
+
+        if error_response:
+            return error_response, error_status
+
+        question_docs = db.collection("questions").stream()
+
+        questions = []
+
+        for doc in question_docs:
+
+            question = doc.to_dict()
+
+            question["id"] = doc.id
+
+            questions.append(question)
+
+        # -------------------------------------------------
+        # Sort questions
+        # -------------------------------------------------
+
+        questions.sort(
+            key=lambda x: x.get(
+                "questionNumber",
+                x.get("order", 0)
+            )
+        )
+
         return jsonify({
-            "message": "question_id and response must be integers"
-        }), 400
-
-    if question_id < 1 or question_id > 10:
-        return jsonify({
-            "message": "question_id must be between 1 and 10"
-        }), 400
-
-    if response < 1 or response > 4:
-        return jsonify({
-            "message": "response must be between 1 and 4"
-        }), 400
-
-    existing_response = AssessmentResponse.query.filter_by(
-        assessment_id=assessment_id,
-        question_id=question_id
-    ).first()
-
-    if existing_response:
-
-        existing_response.response = response
-
-        db.session.commit()
-
-        return jsonify({
-            "message": "Response updated successfully",
-            "response": {
-                "id": existing_response.id,
-                "assessment_id": existing_response.assessment_id,
-                "question_id": existing_response.question_id,
-                "response": existing_response.response,
-                "created_at": (
-                    existing_response.created_at.isoformat()
-                    if existing_response.created_at else None
-                )
-            }
+            "status": "success",
+            "questions": questions
         }), 200
 
-    new_response = AssessmentResponse(
-        assessment_id=assessment.id,
-        question_id=question_id,
-        response=response
+    except Exception as e:
+
+        print("Assessment fetch error:", str(e))
+
+        return jsonify({
+            "status": "error",
+            "message": "Failed to fetch assessment",
+            "error": str(e)
+        }), 500
+
+
+# =========================================================
+# CALCULATE WELLBEING SCORE
+# =========================================================
+
+def calculate_wellbeing_score(answers):
+
+    if not isinstance(answers, list):
+        return None
+
+    if len(answers) == 0:
+        return None
+
+    # -----------------------------------------------------
+    # Questions where HIGHER value means WORSE wellbeing
+    # -----------------------------------------------------
+
+    negative_questions = {
+        "stressLevel",
+        "anxietyLevel",
+        "moodDifficulty",
+        "loneliness",
+        "concentrationDifficulty",
+        "feelingOverwhelmed",
+        "sleepProblemsDueToWorry",
+        "emotionalExhaustion",
+        "socialIsolation"
+    }
+
+    # -----------------------------------------------------
+    # Questions where HIGHER value means BETTER wellbeing
+    # -----------------------------------------------------
+
+    positive_questions = {
+        "socialSupport"
+    }
+
+    wellbeing_values = []
+
+    for item in answers:
+
+        # -------------------------------------------------
+        # Accept {question, answer}
+        # -------------------------------------------------
+
+        if isinstance(item, dict):
+
+            question = item.get("question")
+
+            value = item.get(
+                "answer",
+                item.get(
+                    "value",
+                    item.get("score")
+                )
+            )
+
+        else:
+
+            # Fallback for plain numeric answers
+            question = None
+            value = item
+
+        # -------------------------------------------------
+        # Convert answer to number
+        # -------------------------------------------------
+
+        try:
+
+            value = float(value)
+
+        except (TypeError, ValueError):
+
+            continue
+
+        # -------------------------------------------------
+        # Only accept values from 1 to 5
+        # -------------------------------------------------
+
+        if value < 1 or value > 5:
+            continue
+
+        # -------------------------------------------------
+        # Negative questions
+        #
+        # 1 = Very Low / Never  -> 100 wellbeing
+        # 5 = Very High / Always -> 0 wellbeing
+        # -------------------------------------------------
+
+        if question in negative_questions:
+
+            wellbeing_value = 6 - value
+
+        # -------------------------------------------------
+        # Positive question
+        #
+        # 1 = Very Low -> 0 wellbeing
+        # 5 = Very High -> 100 wellbeing
+        # -------------------------------------------------
+
+        elif question in positive_questions:
+
+            wellbeing_value = value
+
+        else:
+
+            # -------------------------------------------------
+            # For unknown questions, treat as neutral/negative
+            # -------------------------------------------------
+
+            wellbeing_value = 6 - value
+
+        wellbeing_values.append(wellbeing_value)
+
+    # -----------------------------------------------------
+    # No valid numeric answers
+    # -----------------------------------------------------
+
+    if not wellbeing_values:
+        return None
+
+    # -----------------------------------------------------
+    # Convert average 1-5 score to 0-100
+    # -----------------------------------------------------
+
+    average = sum(wellbeing_values) / len(wellbeing_values)
+
+    wellbeing_score = ((average - 1) / 4) * 100
+
+    wellbeing_score = round(wellbeing_score)
+
+    # -----------------------------------------------------
+    # Keep score between 0 and 100
+    # -----------------------------------------------------
+
+    wellbeing_score = max(
+        0,
+        min(100, wellbeing_score)
     )
 
-    db.session.add(new_response)
-    db.session.commit()
-
-    return jsonify({
-        "message": "Response submitted successfully",
-        "response": {
-            "id": new_response.id,
-            "assessment_id": new_response.assessment_id,
-            "question_id": new_response.question_id,
-            "response": new_response.response,
-            "created_at": (
-                new_response.created_at.isoformat()
-                if new_response.created_at else None
-            )
-        }
-    }), 201
+    return wellbeing_score
 
 
-# --------------------------------------------------
-# GENERATE ASSESSMENT RESULT
-# --------------------------------------------------
-@assessment_bp.route(
-    "/<int:assessment_id>/complete",
-    methods=["POST"]
-)
-@jwt_required()
-def complete_assessment(assessment_id):
+# =========================================================
+# CALCULATE RISK LEVEL
+# =========================================================
 
-    user_id = int(get_jwt_identity())
+def calculate_risk_level(wellbeing_score):
 
-    assessment = Assessment.query.filter_by(
-        id=assessment_id,
-        user_id=user_id
-    ).first()
-
-    if not assessment:
-        return jsonify({
-            "message": "Assessment not found"
-        }), 404
-
-    responses = AssessmentResponse.query.filter_by(
-        assessment_id=assessment_id
-    ).all()
-
-    if len(responses) < 10:
-        return jsonify({
-            "message": "Please answer all 10 assessment questions",
-            "answered": len(responses),
-            "required": 10
-        }), 400
-
-    response_map = {
-        response.question_id: response.response
-        for response in responses
-    }
-
-    required_question_ids = list(range(1, 11))
-
-    missing_questions = [
-        question_id
-        for question_id in required_question_ids
-        if question_id not in response_map
-    ]
-
-    if missing_questions:
-        return jsonify({
-            "message": "Some assessment questions are unanswered",
-            "missing_questions": missing_questions
-        }), 400
-
-    if (
-        assessment.age is None
-        or assessment.gender is None
-        or assessment.occupation is None
-        or assessment.sleep_hours is None
-        or assessment.exercise_days_per_week is None
-        or assessment.screen_time_hours is None
-    ):
-        return jsonify({
-            "message": "Basic assessment information is incomplete"
-        }), 400
-
-    # --------------------------------------------------
-    # MAP QUESTION RESPONSES TO ML FEATURES
-    # --------------------------------------------------
-
-    data = {
-
-        "age": assessment.age,
-
-        "gender": assessment.gender,
-
-        "occupation": assessment.occupation,
-
-        "sleep_hours": assessment.sleep_hours,
-
-        "exercise_days_per_week":
-            assessment.exercise_days_per_week,
-
-        "screen_time_hours":
-            assessment.screen_time_hours,
-
-        "stress_level":
-            response_map[1],
-
-        "anxiety_level":
-            response_map[2],
-
-        "mood_difficulty":
-            response_map[3],
-
-        "loneliness":
-            response_map[4],
-
-        "concentration_difficulty":
-            response_map[5],
-
-        "feeling_overwhelmed":
-            response_map[6],
-
-        "sleep_problems_due_to_worry":
-            response_map[7],
-
-        "emotional_exhaustion":
-            response_map[8],
-
-        "social_support":
-            response_map[9],
-
-        "social_isolation":
-            response_map[10]
-    }
-
-    # --------------------------------------------------
-    # RUN COMPLETE ML / WELLBEING PIPELINE
-    # --------------------------------------------------
+    if wellbeing_score is None:
+        return None
 
     try:
 
-        assessment_result = assess_wellbeing(data)
+        score = float(wellbeing_score)
 
-    except Exception as error:
+    except (TypeError, ValueError):
 
-        db.session.rollback()
+        return None
 
-        return jsonify({
-            "message": "Unable to generate wellbeing assessment",
-            "error": str(error)
-        }), 500
+    # -----------------------------------------------------
+    # Higher wellbeing = lower risk
+    # -----------------------------------------------------
 
-    score = assessment_result["score"]
-    risk_level = assessment_result["risk_level"]
+    if score >= 70:
 
-    # --------------------------------------------------
-    # SAVE RESULT
-    # --------------------------------------------------
+        return "Low"
 
-    result = Result.query.filter_by(
-        assessment_id=assessment_id
-    ).first()
+    elif score >= 40:
 
-    if result:
-
-        result.score = score
-        result.risk_level = risk_level
+        return "Moderate"
 
     else:
 
-        result = Result(
-            assessment_id=assessment_id,
-            score=score,
-            risk_level=risk_level
+        return "High"
+
+
+# =========================================================
+# SUBMIT ASSESSMENT
+# =========================================================
+
+@assessment_bp.route("/api/assessment", methods=["POST", "OPTIONS"])
+def submit_assessment():
+
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+
+        # =================================================
+        # VERIFY FIREBASE USER
+        # =================================================
+
+        decoded_token, error_response, error_status = verify_token()
+
+        if error_response:
+            return error_response, error_status
+
+        uid = decoded_token["uid"]
+
+        # =================================================
+        # GET REQUEST DATA
+        # =================================================
+
+        data = request.get_json(silent=True)
+
+        if not data:
+
+            return jsonify({
+                "status": "error",
+                "message": "Assessment data is missing"
+            }), 400
+
+        # =================================================
+        # PERSONAL INFORMATION
+        # =================================================
+
+        age = data.get("age")
+        gender = data.get("gender")
+        occupation = data.get("occupation")
+
+        # =================================================
+        # ADDITIONAL INFORMATION
+        # =================================================
+
+        sleep_hours = data.get("sleepHours")
+        exercise_days = data.get("exerciseDaysPerWeek")
+        screen_time_hours = data.get("screenTimeHours")
+
+        # =================================================
+        # ANSWERS
+        # =================================================
+
+        answers = data.get("answers")
+
+        if answers is None:
+
+            return jsonify({
+                "status": "error",
+                "message": "Answers are missing"
+            }), 400
+
+        # =================================================
+        # ANSWERS MUST BE ARRAY
+        # =================================================
+
+        if not isinstance(answers, list):
+
+            return jsonify({
+                "status": "error",
+                "message": "Answers must be an array"
+            }), 400
+
+        # =================================================
+        # MAKE SURE QUESTIONS WERE ANSWERED
+        # =================================================
+
+        if len(answers) == 0:
+
+            return jsonify({
+                "status": "error",
+                "message": "Please answer the assessment questions"
+            }), 400
+
+        # =================================================
+        # CALCULATE WELLBEING SCORE
+        # =================================================
+
+        wellbeing_score = calculate_wellbeing_score(
+            answers
         )
 
-        db.session.add(result)
+        if wellbeing_score is None:
 
-    assessment.status = "completed"
-    assessment.completed_at = datetime.utcnow()
+            return jsonify({
+                "status": "error",
+                "message": "Unable to calculate wellbeing score"
+            }), 400
 
-    db.session.commit()
+        # =================================================
+        # CALCULATE RISK LEVEL
+        # =================================================
 
-    # --------------------------------------------------
-    # RETURN COMPLETE RESULT
-    # --------------------------------------------------
+        risk_level = calculate_risk_level(
+            wellbeing_score
+        )
 
-    return jsonify({
+        # =================================================
+        # CREATE FIRESTORE DATA
+        # =================================================
 
-        "message":
-            "Assessment completed successfully",
+        assessment_data = {
 
-        "assessment_id":
-            assessment_id,
+            "userId": uid,
 
-        "result": {
+            "age": age,
 
-            "id":
-                result.id,
+            "gender": gender,
 
-            "assessment_id":
-                result.assessment_id,
+            "occupation": occupation,
 
-            "score":
-                result.score,
+            "sleepHours": sleep_hours,
 
-            "risk_level":
-                result.risk_level,
+            "exerciseDaysPerWeek": exercise_days,
 
-            "prediction":
-                assessment_result["prediction"],
+            "screenTimeHours": screen_time_hours,
 
-            "analysis":
-                assessment_result["analysis"],
+            "answers": answers,
 
-            "recommendations":
-                assessment_result["recommendations"],
+            "wellbeingScore": wellbeing_score,
 
-            "created_at": (
-                result.created_at.isoformat()
-                if result.created_at else None
-            )
+            "riskLevel": risk_level,
+
+            "createdAt": firestore.SERVER_TIMESTAMP
         }
 
-    }), 200
+        # =================================================
+        # SAVE TO FIRESTORE
+        # =================================================
+
+        assessment_ref = db.collection(
+            "assessments"
+        ).document()
+
+        assessment_ref.set(
+            assessment_data
+        )
+
+        # =================================================
+        # RESPONSE
+        # =================================================
+
+        return jsonify({
+
+            "status": "success",
+
+            "message": "Assessment submitted successfully",
+
+            "assessmentId": assessment_ref.id,
+
+            "assessment": {
+
+                "id": assessment_ref.id,
+
+                "wellbeingScore": wellbeing_score,
+
+                "riskLevel": risk_level
+            }
+
+        }), 201
+
+    except Exception as e:
+
+        print(
+            "Assessment submission error:",
+            str(e)
+        )
+
+        return jsonify({
+
+            "status": "error",
+
+            "message": "Failed to submit assessment",
+
+            "error": str(e)
+
+        }), 500
+
+
+# =========================================================
+# GET USER'S ASSESSMENT HISTORY
+# =========================================================
+
+@assessment_bp.route(
+    "/api/assessment/history",
+    methods=["GET", "OPTIONS"]
+)
+def get_assessment_history():
+
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+
+        decoded_token, error_response, error_status = verify_token()
+
+        if error_response:
+            return error_response, error_status
+
+        uid = decoded_token["uid"]
+
+        # -------------------------------------------------
+        # Get user's assessments
+        # -------------------------------------------------
+
+        assessment_docs = (
+            db.collection("assessments")
+            .where("userId", "==", uid)
+            .stream()
+        )
+
+        assessments = []
+
+        for doc in assessment_docs:
+
+            assessment = doc.to_dict()
+
+            assessment["id"] = doc.id
+
+            assessments.append(
+                assessment
+            )
+
+        # -------------------------------------------------
+        # Sort newest first
+        # -------------------------------------------------
+
+        assessments.sort(
+            key=lambda x: (
+                x.get("createdAt").timestamp()
+                if x.get("createdAt")
+                and hasattr(
+                    x.get("createdAt"),
+                    "timestamp"
+                )
+                else 0
+            ),
+            reverse=True
+        )
+
+        return jsonify({
+
+            "status": "success",
+
+            "assessments": assessments
+
+        }), 200
+
+    except Exception as e:
+
+        print(
+            "Assessment history error:",
+            str(e)
+        )
+
+        return jsonify({
+
+            "status": "error",
+
+            "message": "Failed to fetch assessment history",
+
+            "error": str(e)
+
+        }), 500
+
+
+# =========================================================
+# GET LATEST ASSESSMENT
+# =========================================================
+
+@assessment_bp.route(
+    "/api/assessment/latest",
+    methods=["GET", "OPTIONS"]
+)
+def get_latest_assessment():
+
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+
+        decoded_token, error_response, error_status = verify_token()
+
+        if error_response:
+            return error_response, error_status
+
+        uid = decoded_token["uid"]
+
+        assessment_docs = (
+            db.collection("assessments")
+            .where("userId", "==", uid)
+            .stream()
+        )
+
+        assessments = []
+
+        for doc in assessment_docs:
+
+            assessment = doc.to_dict()
+
+            assessment["id"] = doc.id
+
+            assessments.append(
+                assessment
+            )
+
+        if not assessments:
+
+            return jsonify({
+
+                "status": "success",
+
+                "assessment": None
+
+            }), 200
+
+        # -------------------------------------------------
+        # Find newest assessment
+        # -------------------------------------------------
+
+        assessments.sort(
+            key=lambda x: (
+                x.get("createdAt").timestamp()
+                if x.get("createdAt")
+                and hasattr(
+                    x.get("createdAt"),
+                    "timestamp"
+                )
+                else 0
+            ),
+            reverse=True
+        )
+
+        latest = assessments[0]
+
+        return jsonify({
+
+            "status": "success",
+
+            "assessment": latest
+
+        }), 200
+
+    except Exception as e:
+
+        print(
+            "Latest assessment error:",
+            str(e)
+        )
+
+        return jsonify({
+
+            "status": "error",
+
+            "message": "Failed to fetch latest assessment",
+
+            "error": str(e)
+
+        }), 500

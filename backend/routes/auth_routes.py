@@ -1,285 +1,355 @@
-import os
-import smtplib
-
-from email.message import EmailMessage
-
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-
-from model.user_model import User
-from config.database import db
+from flask import Blueprint, jsonify, request
+from firebase_admin import auth
+from config.firebase import db
 
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
+auth_bp = Blueprint("auth", __name__)
 
 
-# ---------------------------------------------------------
-# Token generator for password reset
-# ---------------------------------------------------------
+# =========================================================
+# AUTHENTICATION HELPER
+# =========================================================
 
-def generate_reset_token(email):
-    serializer = URLSafeTimedSerializer(
-        os.getenv("SECRET_KEY")
-    )
+def get_authenticated_user():
+    auth_header = request.headers.get("Authorization")
 
-    return serializer.dumps(email, salt="password-reset")
+    if not auth_header:
+        raise ValueError("Authorization token is missing")
+
+    if not auth_header.startswith("Bearer "):
+        raise ValueError("Invalid authorization format")
+
+    token = auth_header.split("Bearer ", 1)[1].strip()
+
+    if not token:
+        raise ValueError("Authorization token is missing")
+
+    return auth.verify_id_token(token)
 
 
-def verify_reset_token(token):
-    serializer = URLSafeTimedSerializer(
-        os.getenv("SECRET_KEY")
-    )
+# =========================================================
+# REGISTER USER
+# =========================================================
+
+@auth_bp.route("/api/auth/register", methods=["POST", "OPTIONS"])
+def register_user():
+
+    if request.method == "OPTIONS":
+        return "", 204
 
     try:
-        email = serializer.loads(
-            token,
-            salt="password-reset",
-            max_age=3600
+
+        # -------------------------------------------------
+        # Verify Firebase ID token
+        # -------------------------------------------------
+
+        decoded_token = get_authenticated_user()
+
+        uid = decoded_token["uid"]
+
+        # -------------------------------------------------
+        # Get request data
+        # -------------------------------------------------
+
+        data = request.get_json(silent=True)
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "Registration data is missing"
+            }), 400
+
+        name = data.get("name", "")
+        email = data.get(
+            "email",
+            decoded_token.get("email", "")
         )
+        phone = data.get("phone", "")
 
-        return email
+        # -------------------------------------------------
+        # Create / update Firestore user profile
+        # -------------------------------------------------
 
-    except (SignatureExpired, BadSignature):
-        return None
+        user_ref = db.collection("users").document(uid)
 
+        user_data = {
+            "uid": uid,
+            "name": name,
+            "email": email,
+            "phone": phone
+        }
 
-# ---------------------------------------------------------
-# Send password reset email
-# ---------------------------------------------------------
+        user_ref.set(user_data, merge=True)
 
-def send_reset_email(email, reset_link):
+        # -------------------------------------------------
+        # Response
+        # -------------------------------------------------
 
-    sender_email = os.getenv("MAIL_USERNAME")
-    sender_password = os.getenv("MAIL_PASSWORD")
-
-    message = EmailMessage()
-
-    message["Subject"] = "MindSync AI - Password Reset"
-    message["From"] = sender_email
-    message["To"] = email
-
-    message.set_content(
-        f"""
-Hello,
-
-We received a request to reset your MindSync AI password.
-
-Click the link below to reset your password:
-
-{reset_link}
-
-This link will expire in 1 hour.
-
-If you did not request a password reset, you can safely ignore this email.
-
-Regards,
-MindSync AI Team
-"""
-    )
-
-    with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
-        smtp.starttls()
-        smtp.login(sender_email, sender_password)
-        smtp.send_message(message)
-
-
-# ---------------------------------------------------------
-# REGISTER
-# ---------------------------------------------------------
-
-@auth_bp.route("/register", methods=["POST"])
-def register():
-
-    data = request.get_json()
-
-    if not data:
         return jsonify({
-            "message": "Request body is required"
-        }), 400
+            "status": "success",
+            "message": "User registered successfully",
+            "user": user_data
+        }), 201
 
-    name = data.get("name")
-    email = data.get("email")
-    password = data.get("password")
+    except auth.ExpiredIdTokenError:
 
-    if not name or not email or not password:
         return jsonify({
-            "message": "Name, email and password are required"
-        }), 400
-
-    if len(password) < 6:
-        return jsonify({
-            "message": "Password must be at least 6 characters"
-        }), 400
-
-    existing_user = User.query.filter_by(email=email).first()
-
-    if existing_user:
-        return jsonify({
-            "message": "Email already registered"
-        }), 409
-
-    user = User(
-        name=name,
-        email=email
-    )
-
-    user.set_password(password)
-
-    db.session.add(user)
-    db.session.commit()
-
-    return jsonify({
-        "message": "Registration successful",
-        "user": user.to_dict()
-    }), 201
-
-
-# ---------------------------------------------------------
-# LOGIN
-# ---------------------------------------------------------
-
-@auth_bp.route("/login", methods=["POST"])
-def login():
-
-    data = request.get_json()
-
-    if not data:
-        return jsonify({
-            "message": "Request body is required"
-        }), 400
-
-    email = data.get("email")
-    password = data.get("password")
-
-    if not email or not password:
-        return jsonify({
-            "message": "Email and password are required"
-        }), 400
-
-    user = User.query.filter_by(email=email).first()
-
-    if not user or not user.check_password(password):
-        return jsonify({
-            "message": "Invalid email or password"
+            "status": "error",
+            "message": "Firebase token has expired"
         }), 401
 
-    access_token = create_access_token(
-        identity=str(user.id)
-    )
-
-    return jsonify({
-        "message": "Login successful",
-        "access_token": access_token,
-        "user": user.to_dict()
-    }), 200
-
-
-# ---------------------------------------------------------
-# FORGOT PASSWORD
-# ---------------------------------------------------------
-
-@auth_bp.route("/forgot-password", methods=["POST"])
-def forgot_password():
-
-    data = request.get_json()
-
-    if not data:
-        return jsonify({
-            "message": "Request body is required"
-        }), 400
-
-    email = data.get("email")
-
-    if not email:
-        return jsonify({
-            "message": "Email is required"
-        }), 400
-
-    user = User.query.filter_by(email=email).first()
-
-    # Don't reveal whether the email exists
-    if not user:
-        return jsonify({
-            "message": "If the email is registered, a password reset link has been sent."
-        }), 200
-
-    try:
-
-        token = generate_reset_token(email)
-
-        frontend_url = os.getenv(
-            "FRONTEND_URL",
-            "http://localhost:5173"
-        )
-
-        reset_link = (
-            f"{frontend_url}/reset-password?token={token}"
-        )
-
-        send_reset_email(
-            email,
-            reset_link
-        )
+    except auth.InvalidIdTokenError:
 
         return jsonify({
-            "message": "Password reset link has been sent to your email."
-        }), 200
+            "status": "error",
+            "message": "Invalid Firebase token"
+        }), 401
 
-    except Exception as error:
-
-        print("Email sending error:", error)
+    except ValueError as e:
 
         return jsonify({
-            "message": "Unable to send password reset email."
+            "status": "error",
+            "message": str(e)
+        }), 401
+
+    except Exception as e:
+
+        print("Registration error:", str(e))
+
+        return jsonify({
+            "status": "error",
+            "message": "Failed to register user",
+            "error": str(e)
         }), 500
 
 
-# ---------------------------------------------------------
-# RESET PASSWORD
-# ---------------------------------------------------------
+# =========================================================
+# LOGIN USER
+# =========================================================
 
-@auth_bp.route("/reset-password", methods=["POST"])
-def reset_password():
+@auth_bp.route("/api/auth/login", methods=["POST", "OPTIONS"])
+def login_user():
 
-    data = request.get_json()
+    if request.method == "OPTIONS":
+        return "", 204
 
-    if not data:
+    try:
+
+        # -------------------------------------------------
+        # Verify Firebase ID token
+        # -------------------------------------------------
+
+        decoded_token = get_authenticated_user()
+
+        uid = decoded_token["uid"]
+
+        email = decoded_token.get("email", "")
+        name = decoded_token.get("name", "")
+
+        # -------------------------------------------------
+        # Get user from Firestore
+        # -------------------------------------------------
+
+        user_ref = db.collection("users").document(uid)
+        user_doc = user_ref.get()
+
+        if user_doc.exists:
+
+            user_data = user_doc.to_dict()
+
+        else:
+
+            # -------------------------------------------------
+            # Create profile if it doesn't exist
+            # -------------------------------------------------
+
+            user_data = {
+                "uid": uid,
+                "email": email,
+                "name": name,
+                "phone": ""
+            }
+
+            user_ref.set(user_data)
+
+        # -------------------------------------------------
+        # Response
+        # -------------------------------------------------
+
         return jsonify({
-            "message": "Request body is required"
-        }), 400
+            "status": "success",
+            "message": "Login successful",
+            "user": {
+                "uid": uid,
+                "email": user_data.get("email", email),
+                "name": user_data.get("name", name),
+                "phone": user_data.get("phone", "")
+            }
+        }), 200
 
-    token = data.get("token")
-    new_password = data.get("password")
+    except auth.ExpiredIdTokenError:
 
-    if not token or not new_password:
         return jsonify({
-            "message": "Token and password are required"
-        }), 400
+            "status": "error",
+            "message": "Firebase token has expired"
+        }), 401
 
-    if len(new_password) < 6:
+    except auth.InvalidIdTokenError:
+
         return jsonify({
-            "message": "Password must be at least 6 characters"
-        }), 400
+            "status": "error",
+            "message": "Invalid Firebase token"
+        }), 401
 
-    email = verify_reset_token(token)
+    except ValueError as e:
 
-    if not email:
         return jsonify({
-            "message": "Invalid or expired reset link"
-        }), 400
+            "status": "error",
+            "message": str(e)
+        }), 401
 
-    user = User.query.filter_by(email=email).first()
+    except Exception as e:
 
-    if not user:
+        print("Login error:", str(e))
+
         return jsonify({
-            "message": "User not found"
-        }), 404
+            "status": "error",
+            "message": "Login failed",
+            "error": str(e)
+        }), 500
 
-    user.set_password(new_password)
 
-    db.session.commit()
+# =========================================================
+# GET CURRENT USER
+# =========================================================
 
-    return jsonify({
-        "message": "Password reset successful"
-    }), 200
+@auth_bp.route("/api/auth/me", methods=["GET", "OPTIONS"])
+def get_current_user():
+
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+
+        decoded_token = get_authenticated_user()
+
+        uid = decoded_token["uid"]
+
+        user_ref = db.collection("users").document(uid)
+        user_doc = user_ref.get()
+
+        if user_doc.exists:
+
+            user_data = user_doc.to_dict()
+
+        else:
+
+            user_data = {
+                "uid": uid,
+                "email": decoded_token.get("email", ""),
+                "name": decoded_token.get("name", ""),
+                "phone": ""
+            }
+
+        return jsonify({
+            "status": "success",
+            "user": {
+                "uid": uid,
+                "email": user_data.get(
+                    "email",
+                    decoded_token.get("email", "")
+                ),
+                "name": user_data.get(
+                    "name",
+                    decoded_token.get("name", "")
+                ),
+                "phone": user_data.get(
+                    "phone",
+                    ""
+                )
+            }
+        }), 200
+
+    except auth.ExpiredIdTokenError:
+
+        return jsonify({
+            "status": "error",
+            "message": "Firebase token has expired"
+        }), 401
+
+    except auth.InvalidIdTokenError:
+
+        return jsonify({
+            "status": "error",
+            "message": "Invalid Firebase token"
+        }), 401
+
+    except ValueError as e:
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 401
+
+    except Exception as e:
+
+        print("Get current user error:", str(e))
+
+        return jsonify({
+            "status": "error",
+            "message": "Authentication failed",
+            "error": str(e)
+        }), 500
+
+
+# =========================================================
+# VERIFY TOKEN
+# =========================================================
+
+@auth_bp.route("/api/auth/verify", methods=["GET", "OPTIONS"])
+def verify_token():
+
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+
+        decoded_token = get_authenticated_user()
+
+        return jsonify({
+            "status": "success",
+            "message": "Token is valid",
+            "uid": decoded_token["uid"],
+            "email": decoded_token.get("email")
+        }), 200
+
+    except auth.ExpiredIdTokenError:
+
+        return jsonify({
+            "status": "error",
+            "message": "Firebase token has expired"
+        }), 401
+
+    except auth.InvalidIdTokenError:
+
+        return jsonify({
+            "status": "error",
+            "message": "Invalid Firebase token"
+        }), 401
+
+    except ValueError as e:
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 401
+
+    except Exception as e:
+
+        print("Token verification error:", str(e))
+
+        return jsonify({
+            "status": "error",
+            "message": "Token verification failed",
+            "error": str(e)
+        }), 500

@@ -1,0 +1,260 @@
+/* ================================
+   SIDEBAR
+================================ */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+
+  width: 250px;
+
+  background: #0a1325;
+
+  border-right: 1px solid #243553;
+
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+
+  z-index: 1000;
+}
+
+
+/* ================================
+   LOGO
+================================ */
+
+.sidebar-logo {
+  height: 90px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 0 24px;
+
+  border-bottom: 1px solid #243553;
+
+  box-sizing: border-box;
+}
+
+.logo-icon {
+  width: 42px;
+  height: 42px;
+
+  border-radius: 12px;
+
+  background: rgba(124, 92, 255, 0.18);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #9b7cff;
+
+  font-size: 22px;
+}
+
+.sidebar-logo h2 {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: 20px;
+
+  font-weight: 700;
+}
+
+.sidebar-logo span {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #7f91ae;
+
+  font-size: 12px;
+}
+
+
+/* ================================
+   NAVIGATION
+================================ */
+
+.sidebar-navigation {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+
+  padding: 25px 14px;
+}
+
+
+/* ================================
+   SIDEBAR LINKS
+================================ */
+
+.sidebar-link {
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  min-height: 48px;
+
+  padding: 0 16px;
+
+  border-radius: 9px;
+
+  color: #8f9db5;
+
+  text-decoration: none;
+
+  font-size: 14px;
+
+  font-weight: 500;
+
+  box-sizing: border-box;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.sidebar-link:hover {
+  background: #141f35;
+
+  color: #ffffff;
+}
+
+
+/* ================================
+   ACTIVE LINK
+================================ */
+
+.sidebar-link.active {
+  background: rgba(105, 84, 232, 0.18);
+
+  color: #a38cff;
+
+  border-left: 3px solid #755df1;
+
+  padding-left: 13px;
+}
+
+
+/* ================================
+   LOGOUT
+================================ */
+
+.sidebar-bottom {
+  margin-top: auto;
+
+  padding: 18px 14px;
+
+  border-top: 1px solid #243553;
+}
+
+.sidebar-logout {
+  width: 100%;
+
+  min-height: 48px;
+
+  border: none;
+
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: #8f9db5;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 0 16px;
+
+  font-size: 14px;
+
+  font-weight: 500;
+
+  cursor: pointer;
+
+  text-align: left;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.sidebar-logout:hover {
+  background: rgba(239, 68, 68, 0.1);
+
+  color: #f87171;
+}
+
+
+/* ================================
+   MOBILE
+================================ */
+
+@media (max-width: 768px) {
+
+  .sidebar {
+    width: 220px;
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  .sidebar {
+    width: 70px;
+  }
+
+  .sidebar-logo {
+    justify-content: center;
+
+    padding: 0;
+  }
+
+  .sidebar-logo h2,
+  .sidebar-logo span {
+    display: none;
+  }
+
+  .sidebar-link {
+    justify-content: center;
+
+    padding: 0;
+  }
+
+  .sidebar-link span {
+    display: none;
+  }
+
+  .sidebar-link.active {
+    padding-left: 0;
+
+    border-left: none;
+  }
+
+  .sidebar-logout {
+    justify-content: center;
+
+    padding: 0;
+  }
+
+  .sidebar-logout span {
+    display: none;
+  }
+
+}

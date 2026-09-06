@@ -193,3 +193,60 @@ button:disabled {
 .login-text a:hover {
   text-decoration: underline;
 }
+.signup-success-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  width: 450px;
+  padding: 28px 30px;
+
+  background: #182235;
+  border: 1px solid #8b5cf6;
+  border-radius: 10px;
+
+  color: #ffffff;
+  text-align: center;
+
+  font-size: 22px;
+  font-weight: 600;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  z-index: 9999;
+}
+
+.signup-failed-popup {
+  position: fixed;
+
+  top: 50%;
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+
+  width: 450px;
+  max-width: calc(100vw - 40px);
+
+  padding: 28px 30px;
+
+  box-sizing: border-box;
+
+  background: #182235;
+
+  border: 1px solid #ef4444;
+
+  border-radius: 10px;
+
+  color: #ffffff;
+
+  text-align: center;
+
+  font-size: 22px;
+
+  font-weight: 600;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  z-index: 9999;
+}
